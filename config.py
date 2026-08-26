@@ -86,6 +86,6 @@ ENABLE_COLORS = True            # Set False for dumb terminals
 # ──────────────────────────────────────────────
 # Logging
 # ──────────────────────────────────────────────
-LOG_FORMAT = "[%(asctime)s] %(levelname)s — %(message)s"
+LOG_FORMAT = "[%(asctime)s] %(levelname)s -- %(message)s"
 LOG_DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 LOG_LEVEL = "INFO"

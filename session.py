@@ -48,7 +48,7 @@ def create_loader():
         )
     })
 
-    logger.info("Instaloader initialized ✓")
+    logger.info("Instaloader initialized [OK]")
     return loader
 
 
@@ -80,10 +80,10 @@ def load_session(loader, username):
         # Verify session is still valid by testing a simple request
         try:
             loader.test_login()
-            logger.info(f"Session restored for @{username} ✓")
+            logger.info(f"Session restored for @{username} [OK]")
             return True
         except instaloader.exceptions.LoginException:
-            logger.warning("Saved session is expired — need fresh login")
+            logger.warning("Saved session is expired -- need fresh login")
             # Delete the stale session file
             try:
                 os.remove(session_file)
@@ -102,7 +102,7 @@ def save_session(loader, username):
 
     try:
         loader.save_session_to_file(session_file)
-        logger.info(f"Session saved → {session_file}")
+        logger.info(f"Session saved -> {session_file}")
     except Exception as e:
         logger.error(f"Failed to save session: {e}")
 
@@ -137,10 +137,10 @@ def login(loader, force_fresh=False, interactive=False):
     # ── If credentials not set, try interactive mode ──
     if not credentials_set:
         if interactive:
-            print("\n" + "═" * 50)
+            print("\n" + "=" * 50)
             print("  Instagram Login Required")
             print("  (Tip: Set credentials in config.py to skip this)")
-            print("═" * 50)
+            print("=" * 50)
 
             try:
                 username = input("  Username: ").strip()
@@ -153,12 +153,12 @@ def login(loader, force_fresh=False, interactive=False):
                 logger.error("Username and password cannot be empty")
                 return False
         else:
-            logger.error("═" * 55)
+            logger.error("=" * 55)
             logger.error("  CREDENTIALS NOT SET!")
-            logger.error("  Edit config.py → set INSTAGRAM_USERNAME & INSTAGRAM_PASSWORD")
+            logger.error("  Edit config.py -> set INSTAGRAM_USERNAME & INSTAGRAM_PASSWORD")
             logger.error("  Or run with --interactive flag to enter them manually")
-            logger.error("  Use a TEST account — never your personal account!")
-            logger.error("═" * 55)
+            logger.error("  Use a TEST account -- never your personal account!")
+            logger.error("=" * 55)
             return False
 
     # ── Try session restore (skip if force_fresh) ──
@@ -172,14 +172,14 @@ def login(loader, force_fresh=False, interactive=False):
 
     try:
         loader.login(username, password)
-        logger.info(f"Login successful for @{username} ✓")
+        logger.info(f"Login successful for @{username} [OK]")
 
         # Save session for future runs
         save_session(loader, username)
         return True
 
     except instaloader.exceptions.BadCredentialsException:
-        logger.error("❌ Bad credentials — wrong username or password")
+        logger.error("[ERROR] Bad credentials -- wrong username or password")
         return False
 
     except instaloader.exceptions.TwoFactorAuthRequiredException:
@@ -190,7 +190,7 @@ def login(loader, force_fresh=False, interactive=False):
                 print("\n  2FA code sent to your device.")
                 code = input("  Enter 2FA code: ").strip()
                 loader.two_factor_login(code)
-                logger.info("2FA login successful ✓")
+                logger.info("2FA login successful [OK]")
                 save_session(loader, username)
                 return True
             except Exception as e:
@@ -203,19 +203,19 @@ def login(loader, force_fresh=False, interactive=False):
 
     except instaloader.exceptions.ConnectionException as e:
         if "Checkpoint" in str(e) or "challenge" in str(e).lower():
-            logger.error("❌ Instagram checkpoint/challenge detected!")
+            logger.error("[ERROR] Instagram checkpoint/challenge detected!")
             logger.error("   Open Instagram app on your phone and verify the login attempt")
             logger.error("   Then try again")
         elif "429" in str(e) or "rate" in str(e).lower():
-            logger.error("❌ Rate limited by Instagram — wait a few minutes and try again")
+            logger.error("[ERROR] Rate limited by Instagram -- wait a few minutes and try again")
         else:
-            logger.error(f"❌ Connection error: {e}")
+            logger.error(f"[ERROR] Connection error: {e}")
         return False
 
     except instaloader.exceptions.LoginException as e:
-        logger.error(f"❌ Login failed: {e}")
+        logger.error(f"[ERROR] Login failed: {e}")
         return False
 
     except Exception as e:
-        logger.error(f"❌ Unexpected error during login: {e}")
+        logger.error(f"[ERROR] Unexpected error during login: {e}")
         return False

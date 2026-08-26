@@ -5,6 +5,7 @@ Handles exporting categorized data to JSON and Excel formats.
 
 import json
 import os
+import sys
 import logging
 from datetime import datetime
 
@@ -102,7 +103,7 @@ def export_to_json(categorized_data, profile_username="profile"):
             json.dump(export_data, f, indent=config.JSON_INDENT, ensure_ascii=False)
 
         file_size_kb = os.path.getsize(filepath) / 1024
-        logger.info(f"JSON exported → {filepath} ({file_size_kb:.1f} KB)")
+        logger.info(f"JSON exported -> {filepath} ({file_size_kb:.1f} KB)")
         return filepath
 
     except Exception as e:
@@ -306,6 +307,14 @@ def export_to_excel(categorized_data, profile_username="profile"):
                             df.to_excel(writer, sheet_name=full_sheet_name, index=False)
                             sheets_written += 1
 
+            # ── Guard: ensure at least one sheet exists ──
+            if sheets_written == 0:
+                empty_df = pd.DataFrame(
+                    [{"Info": "No data was scraped. The target profile may be private or empty."}]
+                )
+                empty_df.to_excel(writer, sheet_name="No Data", index=False)
+                sheets_written += 1
+
             # ── Auto-adjust column widths ──
             for sheet_name in writer.sheets:
                 worksheet = writer.sheets[sheet_name]
@@ -323,7 +332,7 @@ def export_to_excel(categorized_data, profile_username="profile"):
 
         file_size_kb = os.path.getsize(filepath) / 1024
         logger.info(
-            f"Excel exported → {filepath} "
+            f"Excel exported -> {filepath} "
             f"({sheets_written} sheets, {file_size_kb:.1f} KB)"
         )
         return filepath
@@ -340,25 +349,30 @@ def generate_summary_report(categorized_data):
     Args:
         categorized_data: dict from categorizer.categorize_full_scrape()
     """
+    import io
+
     profile_stats = categorized_data.get("profile_stats", {})
     username = profile_stats.get("username", "Unknown")
 
-    print("\n")
-    print("╔" + "═" * 58 + "╗")
-    print("║" + " INSTAGRAM PROFILE CATEGORIZER — FINAL REPORT".center(58) + "║")
-    print("╠" + "═" * 58 + "╣")
+    # Build the report as a string first, then write with proper encoding
+    lines = []
+    lines.append("")
+    lines.append("")
+    lines.append("+" + "=" * 58 + "+")
+    lines.append("|" + " INSTAGRAM PROFILE CATEGORIZER -- FINAL REPORT".center(58) + "|")
+    lines.append("+" + "=" * 58 + "+")
 
     # Profile info
-    print("║" + f"  Profile: @{username}".ljust(58) + "║")
-    print("║" + f"  Posts: {profile_stats.get('posts', 'N/A')}  |  "
-                f"Followers: {profile_stats.get('followers', 'N/A')}  |  "
-                f"Following: {profile_stats.get('following', 'N/A')}".ljust(58) + "║")
+    lines.append("|" + f"  Profile: @{username}".ljust(58) + "|")
+    lines.append("|" + f"  Posts: {profile_stats.get('posts', 'N/A')}  |  "
+                       f"Followers: {profile_stats.get('followers', 'N/A')}  |  "
+                       f"Following: {profile_stats.get('following', 'N/A')}".ljust(58) + "|")
 
-    verified_str = "✓ VERIFIED" if profile_stats.get("is_verified") else "✗ Not Verified"
-    private_str = "🔒 Private" if profile_stats.get("is_private") else "🌐 Public"
-    print("║" + f"  {verified_str}  |  {private_str}".ljust(58) + "║")
+    verified_str = "[V] VERIFIED" if profile_stats.get("is_verified") else "[X] Not Verified"
+    private_str = "[Private]" if profile_stats.get("is_private") else "[Public]"
+    lines.append("|" + f"  {verified_str}  |  {private_str}".ljust(58) + "|")
 
-    print("╠" + "═" * 58 + "╣")
+    lines.append("+" + "=" * 58 + "+")
 
     # Followers breakdown
     followers_cat = categorized_data.get("followers_categorized", {})
@@ -366,22 +380,22 @@ def generate_summary_report(categorized_data):
     total_followers = followers_summary.get("total_accounts", 0)
 
     if total_followers > 0:
-        print("║" + " FOLLOWERS ANALYSIS".center(58) + "║")
-        print("╟" + "─" * 58 + "╢")
-        print("║" + f"  Total scraped: {total_followers}".ljust(58) + "║")
-        print("║" + f"  ✓ Verified:          {followers_summary.get('verified_count', 0):>5}  ({followers_summary.get('verified_pct', 0)}%)".ljust(58) + "║")
-        print("║" + f"  🌐 Public:           {followers_summary.get('public_count', 0):>5}  ({followers_summary.get('public_pct', 0)}%)".ljust(58) + "║")
-        print("║" + f"  🔒 Private:          {followers_summary.get('private_count', 0):>5}  ({followers_summary.get('private_pct', 0)}%)".ljust(58) + "║")
-        print("║" + f"  📋 Complete Profile: {followers_summary.get('complete_profile_count', 0):>5}  ({followers_summary.get('complete_profile_pct', 0)}%)".ljust(58) + "║")
-        print("║" + f"  👻 Incomplete:       {followers_summary.get('incomplete_profile_count', 0):>5}".ljust(58) + "║")
+        lines.append("|" + " FOLLOWERS ANALYSIS".center(58) + "|")
+        lines.append("+" + "-" * 58 + "+")
+        lines.append("|" + f"  Total scraped: {total_followers}".ljust(58) + "|")
+        lines.append("|" + f"  [V] Verified:        {followers_summary.get('verified_count', 0):>5}  ({followers_summary.get('verified_pct', 0)}%)".ljust(58) + "|")
+        lines.append("|" + f"  [Pub] Public:        {followers_summary.get('public_count', 0):>5}  ({followers_summary.get('public_pct', 0)}%)".ljust(58) + "|")
+        lines.append("|" + f"  [Prv] Private:       {followers_summary.get('private_count', 0):>5}  ({followers_summary.get('private_pct', 0)}%)".ljust(58) + "|")
+        lines.append("|" + f"  [OK] Complete:       {followers_summary.get('complete_profile_count', 0):>5}  ({followers_summary.get('complete_profile_pct', 0)}%)".ljust(58) + "|")
+        lines.append("|" + f"  [--] Incomplete:     {followers_summary.get('incomplete_profile_count', 0):>5}".ljust(58) + "|")
 
-        print("╟" + "─" * 58 + "╢")
-        print("║" + "  Follower Tiers:".ljust(58) + "║")
-        print("║" + f"    Nano (0-1K):       {followers_summary.get('tier_nano', 0):>5}".ljust(58) + "║")
-        print("║" + f"    Micro (1K-10K):    {followers_summary.get('tier_micro', 0):>5}".ljust(58) + "║")
-        print("║" + f"    Mid (10K-100K):    {followers_summary.get('tier_mid', 0):>5}".ljust(58) + "║")
-        print("║" + f"    Macro (100K-1M):   {followers_summary.get('tier_macro', 0):>5}".ljust(58) + "║")
-        print("║" + f"    Mega (1M+):        {followers_summary.get('tier_mega', 0):>5}".ljust(58) + "║")
+        lines.append("+" + "-" * 58 + "+")
+        lines.append("|" + "  Follower Tiers:".ljust(58) + "|")
+        lines.append("|" + f"    Nano (0-1K):       {followers_summary.get('tier_nano', 0):>5}".ljust(58) + "|")
+        lines.append("|" + f"    Micro (1K-10K):    {followers_summary.get('tier_micro', 0):>5}".ljust(58) + "|")
+        lines.append("|" + f"    Mid (10K-100K):    {followers_summary.get('tier_mid', 0):>5}".ljust(58) + "|")
+        lines.append("|" + f"    Macro (100K-1M):   {followers_summary.get('tier_macro', 0):>5}".ljust(58) + "|")
+        lines.append("|" + f"    Mega (1M+):        {followers_summary.get('tier_mega', 0):>5}".ljust(58) + "|")
 
     # Following breakdown
     following_cat = categorized_data.get("following_categorized", {})
@@ -389,14 +403,25 @@ def generate_summary_report(categorized_data):
     total_following = following_summary.get("total_accounts", 0)
 
     if total_following > 0:
-        print("╠" + "═" * 58 + "╣")
-        print("║" + " FOLLOWING ANALYSIS".center(58) + "║")
-        print("╟" + "─" * 58 + "╢")
-        print("║" + f"  Total scraped: {total_following}".ljust(58) + "║")
-        print("║" + f"  ✓ Verified:          {following_summary.get('verified_count', 0):>5}  ({following_summary.get('verified_pct', 0)}%)".ljust(58) + "║")
-        print("║" + f"  🌐 Public:           {following_summary.get('public_count', 0):>5}  ({following_summary.get('public_pct', 0)}%)".ljust(58) + "║")
-        print("║" + f"  🔒 Private:          {following_summary.get('private_count', 0):>5}  ({following_summary.get('private_pct', 0)}%)".ljust(58) + "║")
-        print("║" + f"  📋 Complete Profile: {following_summary.get('complete_profile_count', 0):>5}  ({following_summary.get('complete_profile_pct', 0)}%)".ljust(58) + "║")
+        lines.append("+" + "=" * 58 + "+")
+        lines.append("|" + " FOLLOWING ANALYSIS".center(58) + "|")
+        lines.append("+" + "-" * 58 + "+")
+        lines.append("|" + f"  Total scraped: {total_following}".ljust(58) + "|")
+        lines.append("|" + f"  [V] Verified:        {following_summary.get('verified_count', 0):>5}  ({following_summary.get('verified_pct', 0)}%)".ljust(58) + "|")
+        lines.append("|" + f"  [Pub] Public:        {following_summary.get('public_count', 0):>5}  ({following_summary.get('public_pct', 0)}%)".ljust(58) + "|")
+        lines.append("|" + f"  [Prv] Private:       {following_summary.get('private_count', 0):>5}  ({following_summary.get('private_pct', 0)}%)".ljust(58) + "|")
+        lines.append("|" + f"  [OK] Complete:       {following_summary.get('complete_profile_count', 0):>5}  ({following_summary.get('complete_profile_pct', 0)}%)".ljust(58) + "|")
 
-    print("╚" + "═" * 58 + "╝")
-    print()
+    lines.append("+" + "=" * 58 + "+")
+    lines.append("")
+
+    # Print with encoding safety for Windows
+    report = "\n".join(lines)
+    try:
+        # Try utf-8 output first
+        out = open(sys.stdout.fileno(), mode="w", encoding="utf-8", errors="replace", closefd=False)
+        out.write(report + "\n")
+        out.flush()
+    except Exception:
+        # Fallback to plain print
+        print(report)

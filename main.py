@@ -41,10 +41,13 @@ logging.basicConfig(
     format=config.LOG_FORMAT,
     datefmt=config.LOG_DATE_FORMAT,
     handlers=[
-        logging.StreamHandler(sys.stdout),
+        logging.StreamHandler(
+            open(sys.stdout.fileno(), mode="w", encoding="utf-8", errors="replace", closefd=False)
+        ),
         logging.FileHandler(
             f"{config.DATA_DIR}/run_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log",
             encoding="utf-8",
+            errors="replace",
         ),
     ],
 )
@@ -84,15 +87,15 @@ def _print_banner(username, scrape_followers, scrape_following):
         mode_parts.append("Following")
     mode_str = " + ".join(mode_parts)
 
-    print(f"\n{c}{'═' * 55}")
-    print(f"{c}║{b}  INSTAGRAM PROFILE CATEGORIZER{r}")
-    print(f"{c}║{r}  Pure Terminal Tool — No Browser Needed")
-    print(f"{c}{'╠' + '═' * 54}")
-    print(f"{c}║{r}  Target:  {g}@{username}{r}")
-    print(f"{c}║{r}  Mode:    {y}{mode_str}{r}")
-    print(f"{c}║{r}  Batch:   {config.BATCH_SIZE} accounts max per list")
-    print(f"{c}║{r}  Time:    {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    print(f"{c}{'═' * 55}{r}\n")
+    print(f"\n{c}{'=' * 55}")
+    print(f"{c}|{b}  INSTAGRAM PROFILE CATEGORIZER{r}")
+    print(f"{c}|{r}  Pure Terminal Tool -- No Browser Needed")
+    print(f"{c}{'=' * 55}")
+    print(f"{c}|{r}  Target:  {g}@{username}{r}")
+    print(f"{c}|{r}  Mode:    {y}{mode_str}{r}")
+    print(f"{c}|{r}  Batch:   {config.BATCH_SIZE} accounts max per list")
+    print(f"{c}|{r}  Time:    {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"{c}{'=' * 55}{r}\n")
 
 
 def _print_phase(phase_num, title):
@@ -101,7 +104,7 @@ def _print_phase(phase_num, title):
     b = Style.BRIGHT if HAS_COLORS else ""
     r = Style.RESET_ALL if HAS_COLORS else ""
     print(f"\n{c}{b}[Phase {phase_num}]{r} {title}")
-    print(f"{c}{'─' * 45}{r}")
+    print(f"{c}{'-' * 45}{r}")
 
 
 def main():
@@ -110,7 +113,7 @@ def main():
     # Argument Parsing
     # ──────────────────────────────────────────────
     parser = argparse.ArgumentParser(
-        description="Instagram Profile Categorizer — Scrape & categorize followers/following (pure terminal, no browser)",
+        description="Instagram Profile Categorizer -- Scrape & categorize followers/following (pure terminal, no browser)",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -139,7 +142,7 @@ Platforms: Windows | Linux | Termux (Android) | macOS
     parser.add_argument(
         "--interactive", "-i",
         action="store_true",
-        help="Interactive mode — prompt for credentials if not set in config.py",
+        help="Interactive mode -- prompt for credentials if not set in config.py",
     )
     parser.add_argument(
         "--fresh-login",
@@ -190,15 +193,15 @@ Platforms: Windows | Linux | Termux (Android) | macOS
         if not login_success:
             g = Fore.RED if HAS_COLORS else ""
             r = Style.RESET_ALL if HAS_COLORS else ""
-            print(f"\n{g}❌ Login failed — cannot proceed{r}")
-            print(f"   → Check credentials in config.py")
-            print(f"   → Or run with: python main.py {username} --interactive")
-            print(f"   → Make sure 2FA is disabled on your test account")
+            print(f"\n{g}[X] Login failed -- cannot proceed{r}")
+            print(f"   -> Check credentials in config.py")
+            print(f"   -> Or run with: python main.py {username} --interactive")
+            print(f"   -> Make sure 2FA is disabled on your test account")
             return 1
 
         g = Fore.GREEN if HAS_COLORS else ""
         r = Style.RESET_ALL if HAS_COLORS else ""
-        print(f"{g}✅ Login successful!{r}")
+        print(f"{g}[OK] Login successful!{r}")
 
         # ──────────────────────────────────────────────
         # Phase 3: Scraping
@@ -218,22 +221,22 @@ Platforms: Windows | Linux | Termux (Android) | macOS
         if total_scraped == 0:
             y = Fore.YELLOW if HAS_COLORS else ""
             r = Style.RESET_ALL if HAS_COLORS else ""
-            print(f"\n{y}⚠️  No accounts were scraped!{r}")
-            print(f"   → The profile might be private")
-            print(f"   → Instagram might have rate-limited the requests")
-            print(f"   → Check the data/ directory for any incremental saves")
+            print(f"\n{y}[!] No accounts were scraped!{r}")
+            print(f"   -> The profile might be private")
+            print(f"   -> Instagram might have rate-limited the requests")
+            print(f"   -> Check the data/ directory for any incremental saves")
             return 1
 
         g = Fore.GREEN if HAS_COLORS else ""
         r = Style.RESET_ALL if HAS_COLORS else ""
-        print(f"\n{g}✅ Scraping complete — {total_scraped} accounts extracted{r}")
+        print(f"\n{g}[OK] Scraping complete -- {total_scraped} accounts extracted{r}")
 
         # ──────────────────────────────────────────────
         # Phase 4: Categorization
         # ──────────────────────────────────────────────
         _print_phase(4, "Categorizing accounts...")
         categorized_data = categorize_full_scrape(scrape_result)
-        print(f"{g}✅ Categorization complete!{r}")
+        print(f"{g}[OK] Categorization complete!{r}")
 
         # ──────────────────────────────────────────────
         # Phase 5: Export
@@ -245,9 +248,9 @@ Platforms: Windows | Linux | Termux (Android) | macOS
 
         c = Fore.CYAN if HAS_COLORS else ""
         if json_path:
-            print(f"  {c}📄 JSON:  {json_path}{r}")
+            print(f"  {c}[JSON]  {json_path}{r}")
         if excel_path:
-            print(f"  {c}📊 Excel: {excel_path}{r}")
+            print(f"  {c}[XLSX]  {excel_path}{r}")
 
         # ──────────────────────────────────────────────
         # Final Report
@@ -256,17 +259,17 @@ Platforms: Windows | Linux | Termux (Android) | macOS
 
         g = Fore.GREEN if HAS_COLORS else ""
         b = Style.BRIGHT if HAS_COLORS else ""
-        print(f"\n{g}{b}🎉 All done! Check the output/ directory for your files.{r}\n")
+        print(f"\n{g}{b}All done! Check the output/ directory for your files.{r}\n")
         return 0
 
     except KeyboardInterrupt:
         y = Fore.YELLOW if HAS_COLORS else ""
         r = Style.RESET_ALL if HAS_COLORS else ""
-        print(f"\n{y}⚠️  Interrupted by user — shutting down...{r}")
+        print(f"\n{y}[!] Interrupted by user -- shutting down...{r}")
         return 130
 
     except Exception as e:
-        logger.error(f"❌ Unexpected error: {e}", exc_info=True)
+        logger.error(f"[ERROR] Unexpected error: {e}", exc_info=True)
         return 1
 
 

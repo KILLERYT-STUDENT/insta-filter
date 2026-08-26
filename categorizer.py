@@ -186,29 +186,29 @@ def categorize_accounts(raw_accounts, list_type="followers"):
     categories["summary"] = summary
 
     # ── Log summary ──
-    logger.info("═" * 55)
-    logger.info(f"  CATEGORIZATION RESULTS — {list_type.upper()}")
-    logger.info("═" * 55)
+    logger.info("=" * 55)
+    logger.info(f"  CATEGORIZATION RESULTS -- {list_type.upper()}")
+    logger.info("=" * 55)
     logger.info(f"  Total accounts:       {total}")
-    logger.info(f"  ─── Verification ───")
+    logger.info(f"  --- Verification ---")
     logger.info(f"  Verified:             {summary['verified_count']} ({summary['verified_pct']}%)")
     logger.info(f"  Unverified:           {summary['unverified_count']}")
-    logger.info(f"  ─── Privacy ─────────")
+    logger.info(f"  --- Privacy ---------")
     logger.info(f"  Public:               {summary['public_count']} ({summary['public_pct']}%)")
     logger.info(f"  Private:              {summary['private_count']} ({summary['private_pct']}%)")
-    logger.info(f"  ─── Profile ─────────")
+    logger.info(f"  --- Profile ---------")
     logger.info(f"  Complete profiles:    {summary['complete_profile_count']} ({summary['complete_profile_pct']}%)")
     logger.info(f"  Incomplete profiles:  {summary['incomplete_profile_count']}")
-    logger.info(f"  ─── Account Type ────")
+    logger.info(f"  --- Account Type ----")
     logger.info(f"  Business:             {summary['business_count']} ({summary['business_pct']}%)")
     logger.info(f"  Personal:             {summary['personal_count']}")
-    logger.info(f"  ─── Follower Tiers ──")
+    logger.info(f"  --- Follower Tiers --")
     logger.info(f"  Nano (0-1K):          {summary['tier_nano']}")
     logger.info(f"  Micro (1K-10K):       {summary['tier_micro']}")
     logger.info(f"  Mid-Tier (10K-100K):  {summary['tier_mid']}")
     logger.info(f"  Macro (100K-1M):      {summary['tier_macro']}")
     logger.info(f"  Mega (1M+):           {summary['tier_mega']}")
-    logger.info("═" * 55)
+    logger.info("=" * 55)
 
     return categories
 

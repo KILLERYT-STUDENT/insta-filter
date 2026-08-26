@@ -34,7 +34,7 @@ def _save_incremental(accounts, username, list_type):
     try:
         with open(filepath, "w", encoding="utf-8") as f:
             json.dump(accounts, f, indent=config.JSON_INDENT, ensure_ascii=False)
-        logger.info(f"  💾 Incremental save: {len(accounts)} accounts → {filename}")
+        logger.info(f"  [SAVE] Incremental save: {len(accounts)} accounts -> {filename}")
     except Exception as e:
         logger.error(f"  Failed to save incremental data: {e}")
 
@@ -85,25 +85,25 @@ def get_profile(loader, username):
             f"Posts: {stats['posts']} | "
             f"Followers: {stats['followers']} | "
             f"Following: {stats['following']} | "
-            f"{'✓ Verified' if stats['is_verified'] else '✗ Not Verified'} | "
-            f"{'🔒 Private' if stats['is_private'] else '🌐 Public'}"
+            f"{'[V] Verified' if stats['is_verified'] else '[X] Not Verified'} | "
+            f"{'[Private]' if stats['is_private'] else '[Public]'}"
         )
 
         return stats, profile
 
     except instaloader.exceptions.ProfileNotExistsException:
-        logger.error(f"❌ Profile @{username} does not exist!")
+        logger.error(f"[ERROR] Profile @{username} does not exist!")
         return None, None
 
     except instaloader.exceptions.ConnectionException as e:
         if "429" in str(e):
-            logger.error(f"❌ Rate limited while fetching profile — wait and retry")
+            logger.error(f"[ERROR] Rate limited while fetching profile -- wait and retry")
         else:
-            logger.error(f"❌ Connection error fetching profile: {e}")
+            logger.error(f"[ERROR] Connection error fetching profile: {e}")
         return None, None
 
     except Exception as e:
-        logger.error(f"❌ Error fetching profile @{username}: {e}")
+        logger.error(f"[ERROR] Error fetching profile @{username}: {e}")
         return None, None
 
 
@@ -183,10 +183,10 @@ def scrape_list(loader, profile, list_type="followers"):
         iterator_func = profile.get_followees
 
     actual_target = min(total_count, max_accounts)
-    logger.info(f"\n{'═' * 55}")
+    logger.info(f"\n{'=' * 55}")
     logger.info(f"  Scraping {list_type.upper()} of @{username}")
     logger.info(f"  Total {list_type}: {total_count} | Scraping up to: {actual_target}")
-    logger.info(f"{'═' * 55}")
+    logger.info(f"{'=' * 55}")
 
     if profile.is_private:
         # Check if we follow this private account
@@ -194,7 +194,7 @@ def scrape_list(loader, profile, list_type="followers"):
             followers_iter = iterator_func()
             # Try to get the first item to verify access
         except instaloader.exceptions.PrivateProfileNotFollowedException:
-            logger.error(f"  ❌ @{username} is PRIVATE and you don't follow them")
+            logger.error(f"  [ERROR] @{username} is PRIVATE and you don't follow them")
             logger.error(f"     Cannot access {list_type} list")
             return []
 
@@ -207,7 +207,7 @@ def scrape_list(loader, profile, list_type="followers"):
 
         for i, follower_profile in enumerate(iterator, 1):
             if len(accounts) >= max_accounts:
-                logger.info(f"  Reached batch limit of {max_accounts} — stopping")
+                logger.info(f"  Reached batch limit of {max_accounts} -- stopping")
                 break
 
             try:
@@ -218,7 +218,7 @@ def scrape_list(loader, profile, list_type="followers"):
                     # Progress log every 10 accounts
                     if len(accounts) % 10 == 0:
                         logger.info(
-                            f"  📊 Progress: {len(accounts)}/{actual_target} "
+                            f"  [PROGRESS] {len(accounts)}/{actual_target} "
                             f"({len(accounts)/actual_target*100:.1f}%)"
                         )
 
@@ -234,7 +234,7 @@ def scrape_list(loader, profile, list_type="followers"):
                 error_count += 1
                 if "429" in str(e) or "rate" in str(e).lower():
                     logger.warning(
-                        f"  ⚠️  Rate limited at account #{i} — "
+                        f"  [WARN] Rate limited at account #{i} -- "
                         f"waiting {config.RETRY_DELAY}s..."
                     )
                     # Save what we have before waiting
@@ -242,16 +242,16 @@ def scrape_list(loader, profile, list_type="followers"):
                     last_save_count = len(accounts)
                     time.sleep(config.RETRY_DELAY)
                 else:
-                    logger.warning(f"  ⚠️  Connection error on account #{i}: {e}")
+                    logger.warning(f"  [WARN] Connection error on account #{i}: {e}")
                     if error_count >= config.MAX_RETRIES:
                         logger.error(
-                            f"  ❌ Too many errors ({error_count}) — stopping scrape"
+                            f"  [ERROR] Too many errors ({error_count}) -- stopping scrape"
                         )
                         break
                     time.sleep(5)
 
             except instaloader.exceptions.QueryReturnedBadRequestException:
-                logger.warning(f"  ⚠️  Bad request at account #{i} — skipping")
+                logger.warning(f"  [WARN] Bad request at account #{i} -- skipping")
                 error_count += 1
                 if error_count >= config.MAX_RETRIES * 2:
                     break
@@ -259,29 +259,29 @@ def scrape_list(loader, profile, list_type="followers"):
 
             except Exception as e:
                 error_count += 1
-                logger.warning(f"  ⚠️  Error extracting account #{i}: {e}")
+                logger.warning(f"  [WARN] Error extracting account #{i}: {e}")
                 if error_count >= config.MAX_RETRIES * 3:
-                    logger.error("  ❌ Too many extraction errors — stopping")
+                    logger.error("  [ERROR] Too many extraction errors -- stopping")
                     break
 
     except instaloader.exceptions.LoginRequiredException:
-        logger.error("  ❌ Login required! Session may have expired.")
+        logger.error("  [ERROR] Login required! Session may have expired.")
         logger.error("     Run again with --fresh-login flag")
 
     except instaloader.exceptions.PrivateProfileNotFollowedException:
-        logger.error(f"  ❌ @{username} is PRIVATE — cannot access {list_type}")
+        logger.error(f"  [ERROR] @{username} is PRIVATE -- cannot access {list_type}")
 
     except instaloader.exceptions.QueryReturnedNotFoundException:
-        logger.error(f"  ❌ Instagram returned 'not found' for {list_type} query")
+        logger.error(f"  [ERROR] Instagram returned 'not found' for {list_type} query")
 
     except Exception as e:
-        logger.error(f"  ❌ Unexpected error during {list_type} scrape: {e}")
+        logger.error(f"  [ERROR] Unexpected error during {list_type} scrape: {e}")
 
     # Final save
     if accounts:
         _save_incremental(accounts, username, list_type)
 
-    logger.info(f"\n  ✅ {list_type.capitalize()} scrape complete:")
+    logger.info(f"\n  [DONE] {list_type.capitalize()} scrape complete:")
     logger.info(f"     Extracted: {len(accounts)} accounts")
     logger.info(f"     Errors:    {error_count}")
 
@@ -313,7 +313,7 @@ def scrape_profile(loader, target_username, scrape_followers=True, scrape_follow
     stats, profile = get_profile(loader, target_username)
 
     if not stats or not profile:
-        logger.error("Failed to fetch profile — aborting scrape")
+        logger.error("Failed to fetch profile -- aborting scrape")
         return result
 
     result["profile_stats"] = stats
@@ -332,7 +332,7 @@ def scrape_profile(loader, target_username, scrape_followers=True, scrape_follow
 
         # Pause between scrapes to avoid rate limiting
         if scrape_following and result["followers"]:
-            logger.info("\n  ⏳ Pausing between followers and following scrapes...")
+            logger.info("\n  Pausing between followers and following scrapes...")
             pause = random.uniform(5, 10)
             time.sleep(pause)
 
@@ -341,12 +341,12 @@ def scrape_profile(loader, target_username, scrape_followers=True, scrape_follow
         result["following"] = scrape_list(loader, profile, "following")
 
     # ── Summary ──
-    logger.info(f"\n{'═' * 55}")
-    logger.info(f"  SCRAPE SUMMARY — @{stats['username']}")
-    logger.info(f"{'═' * 55}")
+    logger.info(f"\n{'=' * 55}")
+    logger.info(f"  SCRAPE SUMMARY -- @{stats['username']}")
+    logger.info(f"{'=' * 55}")
     logger.info(f"  Followers scraped: {len(result['followers'])}")
     logger.info(f"  Following scraped: {len(result['following'])}")
     logger.info(f"  Total:             {len(result['followers']) + len(result['following'])}")
-    logger.info(f"{'═' * 55}\n")
+    logger.info(f"{'=' * 55}\n")
 
     return result
